@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>SIP Builder</title>
+  </head>
+  <style media="screen">
+    .container {
+      display: grid;
+      grid-template-rows: 20px 1fr;
+      grid-gap: 5px;
+    }
+    .desc {
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .main {
+      display: grid;
+      grid-gap: 5px;
+      min-height: 300px;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      border: 5px double green;
+      background-color: green;
+    }
+    .result {
+      padding: 5px;
+      background-color: white;
+    }
+    .result-data {
+      height: 300px;
+      width: 95%;
+      min-height: 300px;
+      margin: auto;
+    }
+    .flow {
+      display: grid;
+      grid-gap: 3px;
+      border: 1px solid black;
+      padding: 5px;
+      background-color: white;
+      grid-template-rows: repeat(15, 1fr);
+    }
+    .create {
+      display: grid;
+      grid-gap: 3px;
+      border: 1px solid black;
+      padding: 5px;
+      background-color: white;
+      grid-template-rows: 20px repeat(15, 1fr);
+      align-items: start;
+    }
+    .entities {
+      display: grid;
+      grid-gap: 3px;
+      border: 1px solid black;
+      padding: 5px;
+      background-color: white;
+      grid-template-rows: 20px 1fr;
+      align-items: start;
+    }
+    .bold {
+      font-weight: bolder;
+    }
+    .twoleaf {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      border-bottom: 1px solid black;
+    }
+    .oneeigth {
+      display: grid;
+      grid-template-columns: 7fr 1fr;
+      border-bottom: 1px solid black;
+    }
+    .oneseventh {
+      display: grid;
+      grid-template-columns: 6fr 1fr;
+      border-bottom: 1px solid black;
+    }
+    .hidden {
+      display: none;
+    }
+    .modal {
+      display: grid;
+      position: absolute;
+      left: 25%;
+      top: 25%;
+      width: 250px;
+      height: 300px;
+      background-color: lightgrey;
+      padding: 20px;
+      border-radius: 5px;
+    }
+    .editor {
+      display: grid;
+      position: absolute;
+      left: 25%;
+      top: 25%;
+      width: 400px;
+      height: 400px;
+      background-color: lightgrey;
+      padding: 20px;
+      border-radius: 5px;
+    }
+    .entity {
+      border-radius: 3px;
+      border: 1px solid black;
+    }
+    .tooltip {
+      position: absolute;
+      z-index: 9999;
+      padding: 6px;
+      background: #ffd;
+      border: 1px #886 solid;
+      border-radius: 5px;
+      max-width: 400px;
+      word-wrap: break-word;
+    }
+  </style>
+  <body>
+    <div class="container">
+      <div class="menu">
+        <span class="desc">Build SIP.txt by adding Calls in a Diagram</span>
+      </div>
+      <div class="main">
+        <div class="result">
+          <div class="bold">Result</div>
+          <button type="button" onclick="copy()">Copy Content</button>
+          <button type="button" onclick="save()">Save to File</button>
+          <br>
+          <textarea class="result-data" id='result' value=''></textarea>
+        </div>
+        <div class="flow" id="flow">
+          <div class="initial bold">
+            Create Calls and add them to the flow
+          </div>
+        </div>
+        <div class="create">
+          <div class="bold"> Call Creation </div>
+          <div class="twoleaf"> Leg Label <input type="text" id="label"> </div>
+          <div class="twoleaf"> RURI User <input type="text" id="ruri"> </div>
+          <div class="twoleaf"> From User <input type="text" id="from"> </div>
+          <div class="twoleaf"> Call-ID <input type="text" id="callid"> </div>
+          <div class="twoleaf"> SRC IP <input type="text" id="srcip"> </div>
+          <div class="twoleaf"> SRC Port <input type="text" id="srcport"> </div>
+          <div class="twoleaf"> DST IP <input type="text" id="dstip"> </div>
+          <div class="twoleaf"> DST Port <input type="text" id="dstport"> </div>
+          <div class="twoleaf"> Custom Header 1 Label <input type="text" id="custom1label"> </div>
+          <div class="twoleaf"> Custom Header 1 Value <input type="text" id="custom1val"> </div>
+          <div class="twoleaf"> Custom Header 2 Label <input type="text" id="custom2label"> </div>
+          <div class="twoleaf"> Custom Header 2 Value <input type="text" id="custom2val"> </div>
+          <div class="twoleaf"> Custom Header 3 Label <input type="text" id="custom3label"> </div>
+          <div class="twoleaf"> Custom Header 3 Value <input type="text" id="custom3val"> </div>
+          <div> <button type="button" id="createCall">Create Call</button> </div>
+        </div>
+        <div class="entities">
+          <div class="bold"> Entity List </div>
+          <div class="entitylist" id="entitylist">
+
+          </div>
+          <div> <button type="button" id="addEntity">Add New Entity</button> </div>
+        </div>
+      </div>
+    </div>
+    <div class="hidden" id="modal">
+      <button type="button" disabled>Select Entity Type </button>
+      <select class="dropdown" id="modal-dropdown">
+        <option value="ip">IP Address</option>
+        <option value="callid">Call ID</option>
+        <option value="string">String</option>
+      </select>
+      <button type="button" disabled>Enter Value </button>
+      <input type="text" id="modal-value">
+      <button type="button" id="modal-random">Randomize</button>
+      <button type="button" id="modal-create">Create</button>
+      <button type="button" id="modal-cancel">Cancel</button>
+    </div>
+    <div class="hidden" id="editor">
+      <div class="bold"> Call Editing </div>
+      <div class="twoleaf"> Call UUID <input type="text" id="editor-uuid" disabled> </div>
+      <div class="twoleaf"> Leg Label <input type="text" id="editor-label"> </div>
+      <div class="twoleaf"> RURI User <input type="text" id="editor-ruri"> </div>
+      <div class="twoleaf"> From User <input type="text" id="editor-from"> </div>
+      <div class="twoleaf"> Call-ID <input type="text" id="editor-callid"> </div>
+      <div class="twoleaf"> SRC IP <input type="text" id="editor-srcip"> </div>
+      <div class="twoleaf"> SRC Port <input type="text" id="editor-srcport"> </div>
+      <div class="twoleaf"> DST IP <input type="text" id="editor-dstip"> </div>
+      <div class="twoleaf"> DST Port <input type="text" id="editor-dstport"> </div>
+      <div class="twoleaf"> Custom Header 1 Label <input type="text" id="editor-custom1label"> </div>
+      <div class="twoleaf"> Custom Header 1 Value <input type="text" id="editor-custom1val"> </div>
+      <div class="twoleaf"> Custom Header 2 Label <input type="text" id="editor-custom2label"> </div>
+      <div class="twoleaf"> Custom Header 2 Value <input type="text" id="editor-custom2val"> </div>
+      <div class="twoleaf"> Custom Header 3 Label <input type="text" id="editor-custom3label"> </div>
+      <div class="twoleaf"> Custom Header 3 Value <input type="text" id="editor-custom3val"> </div>
+      <div> <button type="button" id="saveEdits">Save</button> <button type="button" id="cancelEdits">Cancel</button> </div>
+    </div>
+  </body>
+  <script type="text/javascript">
+    console.log('starting script, welcome to builder');
+    const debug = true;
+
+    var callDate = new Date();
+
+    var calls = {
+      callArray:[],
+      addCall:function(obj){
+        var offsetMultiplier = this.callArray.length
+        obj.offset = offsetMultiplier * 100
+        this.callArray.push(obj)
+        this.render()
+        this.generateResult()
+      },
+      removeCall:function(uuid) {
+        if(debug)console.log('remove call with uuid', uuid)
+        for(var i=0;i<this.callArray.length;i++){
+          if(this.callArray[i].uuid == uuid) {
+            if(debug)console.log('splicing', i, this.callArray[i]);
+            this.callArray.splice(i, 1);
+          }
+        }
+        this.render()
+        this.generateResult()
+      },
+      editCall:function(uuid) {
+        if(debug)console.log('finding call with uuid', uuid)
+        for(var i=0;i<this.callArray.length;i++){
+          if(this.callArray[i].uuid == uuid) {
+            var call = this.callArray[i];
+            //get modal
+            var editor = document.getElementById('editor')
+            //populate modal
+            var uuid = document.getElementById('editor-uuid')
+            var label = document.getElementById('editor-label')
+            var ruri = document.getElementById('editor-ruri')
+            var from = document.getElementById('editor-from')
+            var callid = document.getElementById('editor-callid')
+            var srcip = document.getElementById('editor-srcip')
+            var srcport = document.getElementById('editor-srcport')
+            var dstip = document.getElementById('editor-dstip')
+            var dstport = document.getElementById('editor-dstport')
+            var custom1label = document.getElementById('editor-custom1label')
+            var custom1val = document.getElementById('editor-custom1val')
+            var custom2label = document.getElementById('editor-custom2label')
+            var custom2val = document.getElementById('editor-custom2val')
+            var custom3label = document.getElementById('editor-custom3label')
+            var custom3val = document.getElementById('editor-custom3val')
+            uuid.value = call.uuid
+            label.value = call.label
+            ruri.value = call.ruri
+            from.value = call.from
+            callid.value = call.callid
+            srcip.value = call.srcip
+            srcport.value = call.srcport
+            dstip.value = call.dstip
+            dstport.value = call.dstport
+            custom1label.value = call.custom1label
+            custom1val.value = call.custom1val
+            custom2label.value = call.custom2label
+            custom2val.value = call.custom2val
+            custom3label.value = call.custom3label
+            custom3val.value = call.custom3val
+            //make visible
+            editor.setAttribute("class", "editor");
+          }
+        }
+      },
+      saveCall:function(uuid, obj) {
+        if(debug)console.log('finding call with uuid', uuid)
+        for(var i=0;i<this.callArray.length;i++){
+          if(this.callArray[i].uuid == uuid) {
+            var call = this.callArray[i];
+
+            //populate modal
+            call.label = obj.label
+            call.ruri = obj.ruri
+            call.from = obj.from
+            call.callid = obj.callid
+            call.srcip = obj.srcip
+            call.srcport = obj.srcport
+            call.dstip = obj.dstip
+            call.dstport = obj.dstport
+            call.custom1label = obj.custom1label
+            call.custom1val = obj.custom1val
+            call.custom2label = obj.custom2label
+            call.custom2val = obj.custom2val
+            call.custom3label = obj.custom3label
+            call.custom3val = obj.custom3val
+
+            this.render()
+            this.generateResult()
+          }
+        }
+      },
+      render:function(){
+        var flow = document.getElementById('flow')
+        flow.innerHTML = ''
+        if(this.callArray.length > 0) {
+          this.callArray.forEach((item, i) => {
+            if(debug)console.log('item', item)
+            var flow = document.getElementById('flow')
+            var obj = document.createElement('div')
+            var htmlTemplate = '<div class="entity oneseventh"'
+            htmlTemplate += ' id="'+item.callid+'" '
+            htmlTemplate += '>'+item.callid+' '+item.label+'  <div><button onclick="calls.editCall(`'+item.uuid+'`)">Edit</button><button onclick="calls.removeCall(`'+item.uuid+'`)">X</button></div></div>'
+            obj.innerHTML = htmlTemplate;
+            obj.setAttribute('id', item.callid)
+            obj.onmouseover = tooltip.show
+            obj.onmousemove = tooltip.follow
+            obj.onmouseout = tooltip.hide
+            flow.appendChild(obj)
+          });
+        }
+      },
+      findCall:function(callid) {
+        var l = this.callArray.length
+        for(var i = 0;i<l;i++) {
+          if(callid == this.callArray[i].callid){
+            return this.callArray[i]
+          }
+        }
+      },
+      generateResult: function () {
+        var resultContainer = document.getElementById('result')
+        var openCall = []
+        for(var i=0;i<this.callArray.length;i++){
+          openCall.push(this.callArray[i])
+        }
+        var ackCall = []
+        var finCall = []
+        var byeCall = []
+        var result = ''
+        var offset = 0
+
+        while(openCall.length>0) {
+          var call = openCall.shift()
+          if(!call.state) {
+            call.state = "init"
+            call.originalOffset = call.offset
+            result += call.createInvite()
+            offset += 100;
+            call.offset += offset
+            ackCall.push(call)
+          }
+        }
+
+        while(ackCall.length>0){
+          var call = ackCall.pop()
+          call.state = "ack'd"
+          result += call.confirmInvite()
+          offset += 100;
+          call.offset += offset
+          byeCall.push(call)
+        }
+
+        while(byeCall.length>0){
+          var call = byeCall.shift()
+          call.state = "bye"
+          result += call.createBye()
+          offset += 100;
+          call.offset += offset
+          finCall.push(call)
+        }
+
+
+        while(finCall.length>0) {
+          var call = finCall.shift()
+          delete call.state
+          call.offset = call.originalOffset
+          delete call.originalOffset
+        }
+        resultContainer.value = result
+      }
+
+    }
+
+    var entityManager = {
+      entitylist: [],
+      addEntity: function(obj) {
+        this.entitylist.push(obj)
+        var data = JSON.stringify(this.entitylist)
+        localStorage.setItem('entitylist', data)
+        this.render()
+      },
+      removeEntity: function(id) {
+        if(debug)console.log('remove entity called with id', id)
+        for(var i=0;i<this.entitylist.length;i++){
+          if(this.entitylist[i].uuid == id) {
+            if(debug)console.log('splicing', i, this.entitylist[i]);
+            this.entitylist.splice(i, 1);
+          }
+        }
+        var data = JSON.stringify(this.entitylist)
+        localStorage.setItem('entitylist', data)
+        this.render()
+      },
+      render: function() {
+        var list = document.getElementById('entitylist')
+        list.innerHTML = ''
+        if(this.entitylist.length > 0){
+          this.entitylist.forEach((item, i) => {
+            var list = document.getElementById('entitylist')
+            var obj = document.createElement('div')
+            obj.innerHTML = '<div class="entity oneeigth" draggable="true" val="'+item.value+'">'+item.type+' '+item.value+'   <button onclick="entityManager.removeEntity(`'+item.uuid+'`)">X</button></div>'
+            obj.addEventListener("dragstart", dragstart_handler);
+            list.appendChild(obj)
+          })
+        }
+      },
+      syncFromLocalStorage: function () {
+        if(debug)console.log('Fetched data from localStorage, if there.')
+        var data = localStorage.getItem('entitylist');
+        try {
+          this.entitylist = JSON.parse(data) || [];
+        } catch (e) {
+          if(debug)console.log('error fetching data', e)
+          this.entitylist = [];
+        }
+        if(debug)console.log(data, this.entitylist)
+        this.render()
+      }
+    }
+
+    function CallObject (label, ruri, from, callid, srcip, srcport, dstip, dstport, custom1label, custom1val, custom2label, custom2val, custom3label, custom3val, uuid) {
+      this.label = label;
+      this.ruri = ruri;
+      this.from = from;
+      this.callid = callid;
+      this.srcip = srcip;
+      this.srcport = srcport;
+      this.dstip = dstip;
+      this.dstport = dstport;
+      this.custom1label = custom1label || "";
+      this.custom1val = custom1val || "";
+      this.custom2label = custom2label || "";
+      this.custom2val = custom2val || "";
+      this.custom3label = custom3label || "";
+      this.custom3val = custom3val || "";
+      this.uuid = uuid || Math.random().toString(36).substring(16);
+      this.offset = 0;
+      this.createInvite = function () {
+        //convert iso string to sip time string + offset
+        var milliseconds = 0 + this.offset;
+        var convertedInv = callDate.toISOString().replace(/.[0-9][0-9][0-9]Z/, ".00"+milliseconds+"-05:00")
+        var milliseconds100 = 50 + this.offset;
+        var converted100 = callDate.toISOString().replace(/.[0-9][0-9][0-9]Z/, ".00"+milliseconds100+"-05:00")
+
+        var output = "proto:UDP "
+        output += convertedInv + "  "
+        output += this.srcip+":"+this.srcport+" ---> "
+        output += this.dstip+":"+this.dstport+"\r\n\r\n"
+        output += "INVITE sip:"+this.ruri+" SIP/2.0\r\n"
+        output += "Via: SIP/2.0/UDP "+this.srcip+":"+this.srcport+"\r\n"
+        output += "Max-Forwards: 70\r\n"
+        output += "From: <sip:"+this.from+">\r\n"
+        output += "To: <sip:"+this.ruri+">\r\n"
+        output += "Contact: <sip:"+this.from+">\r\n"
+        output += "Call-ID: "+this.callid+"\r\n"
+        output += "CSeq: 31911 INVITE\r\n"
+        output += "Allow: PRACK, INVITE, ACK, BYE, CANCEL, UPDATE, INFO, SUBSCRIBE, NOTIFY, REFER, MESSAGE, OPTIONS\r\n"
+        output += "Supported: replaces, 100rel, timer, norefersub\r\n"
+        output += "Session-Expires: 1800\r\n"
+        output += "Min-SE: 90\r\n"
+        output += "User-Agent: Hepgen/123\r\n"
+        if(this.custom1val.length > 0) {
+          output += this.custom1label+": "+this.custom1val+"\r\n"
+        }
+        if(this.custom2val.length > 0) {
+          output += this.custom2label+": "+this.custom2val+"\r\n"
+        }
+        if(this.custom3val.length > 0) {
+          output += this.custom3label+": "+this.custom3val+"\r\n"
+        }
+        output += "Content-Type: application/sdp\r\n"
+        output += "Content-Length:   319\r\n\r\n"
+        output += "v=0\r\n"
+        output += "o=- 3837167151 3837167151 IN IP4 192.168.153.1\r\n"
+        output += "s=HepGen 127.0.0.1\r\n"
+        output += "b=AS:84\r\n"
+        output += "t=0 0\r\n"
+        output += "a=X-nat:0\r\n"
+        output += "m=audio 4000 RTP/AVP 8 101\r\n"
+        output += "c=IN IP4 192.168.153.1\r\n"
+        output += "b=TIAS:64000\r\n"
+        output += "a=rtcp:4001 IN IP4 192.168.153.1\r\n"
+        output += "a=sendrecv\r\n"
+        output += "a=rtpmap:8 PCMA/8000\r\n"
+        output += "a=rtpmap:101 telephone-event/8000\r\n"
+        output += "a=fmtp:101 0-16\r\n"
+        output += "a=ssrc:1889210388 cname:1a107f3e441a1640\r\n"
+        output += "\r\n"
+        //immediate 100 reply
+        output += "proto:UDP "
+        output += converted100 + "  "
+        output += this.dstip+":"+this.dstport+" ---> "
+        output += this.srcip+":"+this.srcport+"\r\n\r\n"
+        output += "SIP/2.0 100 Trying\r\n"
+        output += "Via: SIP/2.0/UDP "+this.srcip+":"+this.srcport+"\r\n"
+        output += "From: <sip:"+this.from+">\r\n"
+        output += "To: <sip:"+this.ruri+">\r\n"
+        output += "Call-ID: "+this.callid+"\r\n"
+        output += "CSeq: 31911 INVITE\r\n"
+        output += "Server: Hepgen Fake 123\r\n"
+        output += "Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE\r\n"
+        output += "Supported: replaces, timer\r\n"
+        output += "Session-Expires: 1800;refresher=uas\r\n"
+        output += "Contact: <sip:"+this.from+">\r\n"
+        output += "Content-Length:   319\r\n\r\n"
+
+        return output;
+      };
+      this.confirmInvite = function () {
+        var milliseconds =  + this.offset;
+        var converted = callDate.toISOString().replace(/.[0-9][0-9][0-9]Z/, ".00"+milliseconds+"-05:00")
+        var millisecondsAck = 50 + this.offset;
+        var convertedAck = callDate.toISOString().replace(/.[0-9][0-9][0-9]Z/, ".00"+millisecondsAck+"-05:00")
+
+        /* 200 OK */
+
+        var output = "proto:UDP "
+        output += converted + "  "
+        output += this.dstip+":"+this.dstport+" ---> "
+        output += this.srcip+":"+this.srcport+"\r\n\r\n"
+        output += "SIP/2.0 200 OK\r\n"
+        output += "Via: SIP/2.0/UDP "+this.srcip+":"+this.srcport+"\r\n"
+        output += "From: <sip:"+this.from+">\r\n"
+        output += "To: <sip:"+this.ruri+">\r\n"
+        output += "Call-ID: "+this.callid+"\r\n"
+        output += "CSeq: 31911 INVITE\r\n"
+        output += "Server: Hepgen Fake 123\r\n"
+        output += "Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE\r\n"
+        output += "Supported: replaces, timer\r\n"
+        output += "Session-Expires: 1800;refresh=uas\r\n"
+        output += "Contact: <sip:"+this.from+">\r\n"
+        if(this.custom1val.length > 0) {
+          output += this.custom1label+": "+this.custom1val+"\r\n"
+        }
+        if(this.custom2val.length > 0) {
+          output += this.custom2label+": "+this.custom2val+"\r\n"
+        }
+        if(this.custom3val.length > 0) {
+          output += this.custom3label+": "+this.custom3val+"\r\n"
+        }
+        output += "Require: timer\r\n"
+        output += "Content-Type: application/sdp\r\n"
+        output += "Content-Length:   254\r\n\r\n"
+        output += "v=0\r\n"
+        output += "o=root 1850387284 1850387284 IN IP4 "+this.srcip+"\r\n"
+        output += "s=Asterisk PBX 16.17.0.1\r\n"
+        output += "c=IN IP4 "+this.srcip+"\r\n"
+        output += "t=0 0\r\n"
+        output += "m=audio 16110 RTP/AVP 8 101\r\n"
+        output += "a=rtpmap:8 PCMA/8000\r\n"
+        output += "a=rtpmap:101 telephone-event/8000\r\n"
+        output += "a=fmtp:101 0-16\r\n"
+        output += "a=ptime:20\r\n"
+        output += "a=maxptime:150\r\n"
+        output += "a=sendrecv\r\n"
+        output += "\r\n"
+
+        /* ACK */
+
+        output += "proto:UDP "
+        output += convertedAck + "  "
+        output += this.srcip+":"+this.srcport+" ---> "
+        output += this.dstip+":"+this.dstport+"\r\n\r\n"
+        output += "ACK sip:"+this.ruri+" SIP/2.0\r\n"
+        output += "Via: SIP/2.0/UDP "+this.srcip+":"+this.srcport+"\r\n"
+        output += "Max-Forwards: 70\r\n"
+        output += "From: <sip:"+this.from+">\r\n"
+        output += "To: <sip:"+this.ruri+">\r\n"
+        output += "Contact: <sip:"+this.from+">\r\n"
+        output += "Call-ID: "+this.callid+"\r\n"
+        output += "CSeq: 31911 ACK\r\n"
+        output += "User-Agent: Hepgen/123\r\n"
+        output += "Content-Length:   0\r\n\r\n"
+        output += "\r\n"
+
+        return output;
+      };
+      this.createBye = function () {
+        var milliseconds = 0 + this.offset;
+        var converted = callDate.toISOString().replace(/.[0-9][0-9][0-9]Z/, ".00"+milliseconds+"-05:00")
+        var milliseconds200 = 50 + this.offset;
+        var converted200 = callDate.toISOString().replace(/.[0-9][0-9][0-9]Z/, ".00"+milliseconds200+"-05:00")
+
+        /* BYE */
+
+        var output = "proto:UDP "
+        output += converted + "  "
+        output += this.dstip+":"+this.dstport+" ---> "
+        output += this.srcip+":"+this.srcport+"\r\n\r\n"
+        output += "BYE sip:"+this.ruri+" SIP/2.0\r\n"
+        output += "Via: SIP/2.0/UDP "+this.srcip+":"+this.srcport+"\r\n"
+        output += "Max-Forwards: 70\r\n"
+        output += "From: <sip:"+this.from+">\r\n"
+        output += "To: <sip:"+this.ruri+">\r\n"
+        output += "Call-ID: "+this.callid+"\r\n"
+        output += "CSeq: 102 BYE\r\n"
+        output += "User-Agent: Hepgen/123\r\n"
+        if(this.custom1val.length > 0) {
+          output += this.custom1label+": "+this.custom1val+"\r\n"
+        }
+        if(this.custom2val.length > 0) {
+          output += this.custom2label+": "+this.custom2val+"\r\n"
+        }
+        if(this.custom3val.length > 0) {
+          output += this.custom3label+": "+this.custom3val+"\r\n"
+        }
+        output += "Content-Length:   0\r\n\r\n"
+        output += "\r\n"
+
+        /*200 OK */
+
+        output += "proto:UDP "
+        output += converted200 + "  "
+        output += this.srcip+":"+this.srcport+" ---> "
+        output += this.dstip+":"+this.dstport+"\r\n\r\n"
+        output += "SIP/2.0 200 OK\r\n"
+        output += "Via: SIP/2.0/UDP "+this.srcip+":"+this.srcport+"\r\n"
+        output += "Call-ID: "+this.callid+"\r\n"
+        output += "From: <sip:"+this.from+">\r\n"
+        output += "To: <sip:"+this.ruri+">\r\n"
+        output += "CSeq: 102 BYE\r\n"
+        output += "Content-Length:   0\r\n\r\n"
+        output += "\r\n"
+
+        return output;
+      };
+
+    }
+
+    document.getElementById('createCall').addEventListener('click', function(ev) {
+      // get all the fields
+      var label = document.getElementById('label')
+      var ruri = document.getElementById('ruri')
+      var from = document.getElementById('from')
+      var callid = document.getElementById('callid')
+      var srcip = document.getElementById('srcip')
+      var srcport = document.getElementById('srcport')
+      var dstip = document.getElementById('dstip')
+      var dstport = document.getElementById('dstport')
+      var custom1label = document.getElementById('custom1label')
+      var custom1val = document.getElementById('custom1val')
+      var custom2label = document.getElementById('custom2label')
+      var custom2val = document.getElementById('custom2val')
+      var custom3label = document.getElementById('custom3label')
+      var custom3val = document.getElementById('custom3val')
+      var uuid = Math.random().toString(36).substring(7);
+
+      calls.addCall(new CallObject(label.value, ruri.value, from.value, callid.value, srcip.value, srcport.value, dstip.value, dstport.value, custom1label.value, custom1val.value, custom2label.value, custom2val.value, custom3label.value, custom3val.value, uuid))
+    })
+
+    document.getElementById('addEntity').addEventListener('click', function(ev) {
+      document.getElementById('modal').setAttribute('class', 'modal')
+    })
+
+    document.getElementById('modal-cancel').addEventListener('click', function(ev) {
+      document.getElementById('modal').setAttribute('class', 'hidden')
+      var datafield = document.getElementById('modal-value')
+      datafield.value = ''
+    })
+
+    document.getElementById('modal-dropdown').addEventListener('change', function(ev) {
+      //only allow randomize when it is not a string
+      if(ev.target.value == "callid" || ev.target.value == "ip"){
+        document.getElementById('modal-random').removeAttribute('disabled')
+      } else {
+        document.getElementById('modal-random').setAttribute('disabled', 'true')
+      }
+    })
+
+    document.getElementById('modal-create').addEventListener('click', function (ev) {
+      // get type and handle value depending on what it is
+      var dropdown = document.getElementById('modal-dropdown')
+      var type = dropdown.value;
+      var datafield = document.getElementById('modal-value')
+      var value = datafield.value;
+
+      var entityObj = {
+        uuid: Math.random().toString(36).substring(7),
+        type: type,
+        value: value
+      }
+
+      entityManager.addEntity(entityObj)
+
+    })
+
+    document.getElementById('modal-random').addEventListener('click', function (ev) {
+      var dropdown = document.getElementById('modal-dropdown')
+      var type = dropdown.value;
+      var datafield = document.getElementById('modal-value')
+
+      if(type == 'ip') {
+        datafield.value = randomIp();
+      }
+
+      if(type == 'callid') {
+        datafield.value = Math.random().toString(36).substring(7) + '@127.0.0.1';
+      }
+
+    })
+
+    var randomIp = function() {
+      var ip = randomByte() +'.' +
+               randomByte() +'.' +
+               randomByte() +'.' +
+               randomByte();
+      if (isPrivate(ip)) return randomIp();
+      return ip;
+    }
+
+    var isPrivate = function(ip) {
+      return /^10\.|^192\.168\.|^172\.16\.|^172\.17\.|^172\.18\.|^172\.19\.|^172\.20\.|^172\.21\.|^172\.22\.|^172\.23\.|^172\.24\.|^172\.25\.|^172\.26\.|^172\.27\.|^172\.28\.|^172\.29\.|^172\.30\.|^172\.31\./.test(ip);
+    }
+
+    var randomByte = function() {
+      return Math.round(Math.random()*254);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      entityManager.syncFromLocalStorage()
+    })
+
+    /* Call Editor Interaction */
+
+    document.getElementById('saveEdits').addEventListener('click', function(ev) {
+      //get modal
+      var editor = document.getElementById('editor')
+      //hide modal
+      editor.setAttribute("class", "hidden");
+      //populate obj
+      var uuid = document.getElementById('editor-uuid')
+      var label = document.getElementById('editor-label')
+      var ruri = document.getElementById('editor-ruri')
+      var from = document.getElementById('editor-from')
+      var callid = document.getElementById('editor-callid')
+      var srcip = document.getElementById('editor-srcip')
+      var srcport = document.getElementById('editor-srcport')
+      var dstip = document.getElementById('editor-dstip')
+      var dstport = document.getElementById('editor-dstport')
+      var custom1label = document.getElementById('editor-custom1label')
+      var custom1val = document.getElementById('editor-custom1val')
+      var custom2label = document.getElementById('editor-custom2label')
+      var custom2val = document.getElementById('editor-custom2val')
+      var custom3label = document.getElementById('editor-custom3label')
+      var custom3val = document.getElementById('editor-custom3val')
+
+      var obj = {}
+      obj.uuid = uuid.value
+      obj.label = label.value
+      obj.ruri = ruri.value
+      obj.from = from.value
+      obj.callid = callid.value
+      obj.srcip = srcip.value
+      obj.srcport = srcport.value
+      obj.dstip = dstip.value
+      obj.dstport = dstport.value
+      obj.custom1label = custom1label.value
+      obj.custom1val = custom1val.value
+      obj.custom2label = custom2label.value
+      obj.custom2val = custom2val.value
+      obj.custom3label = custom3label.value
+      obj.custom3val = custom3val.value
+
+      uuid.value = ''
+      label.value = ''
+      ruri.value = ''
+      from.value = ''
+      callid.value = ''
+      srcip.value = ''
+      srcport.value = ''
+      dstip.value = ''
+      dstport.value = ''
+      custom1label.value = ''
+      custom1val.value = ''
+      custom2label.value = ''
+      custom2val.value = ''
+      custom3label.value = ''
+      custom3val.value = ''
+
+      calls.saveCall(obj.uuid, obj)
+    })
+
+    document.getElementById('cancelEdits').addEventListener('click', function(ev) {
+      //get modal
+      var editor = document.getElementById('editor')
+      //hide modal
+      editor.setAttribute("class", "hidden");
+      //empty
+      var uuid = document.getElementById('editor-uuid')
+      var label = document.getElementById('editor-label')
+      var ruri = document.getElementById('editor-ruri')
+      var from = document.getElementById('editor-from')
+      var callid = document.getElementById('editor-callid')
+      var srcip = document.getElementById('editor-srcip')
+      var srcport = document.getElementById('editor-srcport')
+      var dstip = document.getElementById('editor-dstip')
+      var dstport = document.getElementById('editor-dstport')
+      var custom1label = document.getElementById('editor-custom1label')
+      var custom1val = document.getElementById('editor-custom1val')
+      var custom2label = document.getElementById('editor-custom2label')
+      var custom2val = document.getElementById('editor-custom2val')
+      var custom3label = document.getElementById('editor-custom3label')
+      var custom3val = document.getElementById('editor-custom3val')
+      uuid.value = ''
+      label.value = ''
+      ruri.value = ''
+      from.value = ''
+      callid.value = ''
+      srcip.value = ''
+      srcport.value = ''
+      dstip.value = ''
+      dstport.value = ''
+      custom1label.value = ''
+      custom1val.value = ''
+      custom2label.value = ''
+      custom2val.value = ''
+      custom3label.value = ''
+      custom3val.value = ''
+    })
+
+    /* Drag Interaction stuff */
+
+    function dragstart_handler(ev) {
+      if(debug)console.log('drag start, data transfer object', ev.target.attributes.val.value)
+      ev.dataTransfer.setData("text/plain", ev.target.attributes.val.value)
+    }
+
+    /* Tooltip Builder */
+
+    const tooltip = new (function() {
+      const node = document.createElement('div');
+      node.className = 'tooltip';
+      node.setAttribute('hidden', '');
+      document.body.appendChild(node);
+
+      this.follow = function(ev) {
+        node.style.left = ev.clientX + 20 + 'px';
+        node.style.top = ev.clientY + 10 + 'px';
+      };
+
+      this.show = function(ev) {
+        if(debug)console.log('tooltip creation for event.target.label')
+        node.textContent = JSON.stringify(calls.findCall(ev.target.id))
+        node.removeAttribute('hidden');
+      };
+
+      this.hide = function() {
+        node.setAttribute('hidden', '');
+      };
+    })();
+
+    function copy () {
+      var field = document.getElementById('result')
+      var text = field.value
+      navigator.clipboard.writeText(text)
+    }
+
+    function save () {
+      var field = document.getElementById('result')
+      var text = field.value
+      var pom = document.createElement('a');
+      pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+      pom.setAttribute('download', 'pcap'+new Date().toISOString()+'.txt');
+
+      if (document.createEvent) {
+        var event = document.createEvent('MouseEvents');
+        event.initEvent('click', true, true);
+        pom.dispatchEvent(event);
+      }
+      else {
+        pom.click();
+      }
+    }
+
+  </script>
+</html>
